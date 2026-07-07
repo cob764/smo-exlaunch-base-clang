@@ -12,7 +12,7 @@ namespace mallow::config {
 {
     "myModOption": true,
     "logger": {
-        "enable": false,
+        "enable": true,
         "reconnect": false,
         "ip": "192.168.1.110",
         "port": 3080

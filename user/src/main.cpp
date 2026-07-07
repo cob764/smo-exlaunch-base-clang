@@ -1,11 +1,14 @@
+#include <exl/lib.hpp>
 #include <mallow/mallow.hpp>
 
 #include "ActorFactory/actorPatches.h"
+#include "Kingdom-18/Kingdom-18-patches.h"
 
 #include "Library/Controller/InputFunction.h"
 #include "ModOptions.h"
 #include "Scene/StageScene.h"
-
+#include "Bgm/CustomMusicList.h"
+#include "Scene/PauseMenuHooks.h"
 using mallow::log::logLine;
 
 struct ScenePlayHook : public mallow::hook::Trampoline<ScenePlayHook> {
@@ -17,9 +20,9 @@ struct ScenePlayHook : public mallow::hook::Trampoline<ScenePlayHook> {
 };
 
 extern "C" void userMain() {
-    exl::hook::Initialize();
     mallow::init::installHooks();
     ca::actorPatches();
-
-    ScenePlayHook::InstallAtSymbol("_ZN10StageScene7exePlayEv");
+    installKingdom18Patches();
+    ca::addMusicList();
+    PauseMenuHooks::installPauseMenuHooks();
 }
