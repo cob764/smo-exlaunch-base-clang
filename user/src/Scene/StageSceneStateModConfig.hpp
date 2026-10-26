@@ -15,6 +15,7 @@
 #include "game/Input/InputSeparator.h"
 #include "Layout/SimpleLayoutMenu.h"
 #include "System/GameDataHolder.h"
+#include "Bgm/CustomMusicList.h"
 
 class FooterParts;
 
@@ -67,15 +68,11 @@ private:
     enum MainMenuOption
     {
         MAIN_DUMMY_ACTION = 0,
-        MAIN_TOGGLE_EXAMPLE = 1
+        MAIN_PLAY_CUSTOM_SONG = 1
     };
     static constexpr int mMainMenuOptionCount = 2; //change this to the number of options you add to the menu
-// somewhere accessible — a public static getter so other files
-    public:
-    static bool isExampleToggleOn() { return sExampleToggle; }
 
-private:
-    static bool sExampleToggle;
+    s32 mCurrentSongIndex = 0;
 
     // ---- state --------------------------------------------------------------
     al::MessageSystem* mMsgSystem = nullptr;

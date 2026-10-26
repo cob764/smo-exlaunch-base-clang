@@ -7,14 +7,7 @@
 #include <vector>
 
 uintptr_t OriginalBgmListAddr = 0x7101d98700;
-struct BgmEntry {
-    const char* field_0;
-    const char* field_1;
-    const char* field_2;
-    const char* field_3;
-    const char* field_4;
-};
-static std::vector<BgmEntry> CombinedBgmList;
+std::vector<BgmEntry> CombinedBgmList;
 // ---------------------------------------------------------
 // 3️⃣ Funktion zur Initialisierung
 // ---------------------------------------------------------
@@ -173,6 +166,47 @@ void InitCustomBgmList() {
         CombinedBgmList.push_back({"STM_169", nullptr, nullptr, nullptr, "EtcBgm"});
         CombinedBgmList.push_back({"STM_170", nullptr, nullptr, nullptr, "EtcBgm"});
 
+        // ** 121 to 130 **
+        CombinedBgmList.push_back({"STM_171", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_172", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_173", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_174", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_175", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_177", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_178", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_179", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_180", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_181", nullptr, nullptr, nullptr, "EtcBgm"});
+
+        // ** 131 to 140 **
+        CombinedBgmList.push_back({"STM_182", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_183", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_184", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_185", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_186", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_187", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_188", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_189", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_190", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_191", nullptr, nullptr, nullptr, "EtcBgm"});
+
+        // ** 141 to 150 **
+        CombinedBgmList.push_back({"STM_192", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_193", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_194", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_195", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_196", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_197", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_198", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_199", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_200", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_201", nullptr, nullptr, nullptr, "EtcBgm"});
+
+        // ** 151 to 160 **
+        CombinedBgmList.push_back({"STM_202", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_203", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_204", nullptr, nullptr, nullptr, "EtcBgm"});
+
         // Eigene zusätzliche Einträge
         /*
         CombinedBgmList.push_back("StmRsBgmCloudKingdom");
@@ -314,4 +348,6 @@ void addMusicList() {
     checkHigherThanDefault1::InstallAtOffset(0x4d9158);  // 
     checkHigherThanDefault2::InstallAtOffset(0x4d85dc);  // 
 }
+
+const std::vector<BgmEntry>& getCombinedBgmList() { return CombinedBgmList; }
 }  // namespace ca
