@@ -1,3 +1,4 @@
+#include <mallow/mallow.hpp>
 #include "Scene/StageSceneStateModConfig.hpp"
 
 #include "Library/Layout/LayoutActionFunction.h"
@@ -8,8 +9,33 @@
 #include "Layout/FooterParts.h"
 #include "Layout/SimpleLayoutMenu.h"
 #include "Util/StageInputFunction.h"
-//static storage
-bool StageSceneStateModConfig::sExampleToggle = false;
+
+#include "Library/Bgm/BgmLineFunction.h"
+#include "System/GameDataFunction.h"
+#include "System/GameDataHolderWriter.h"
+
+// Not present in this project's OdysseyHeaders copy, so declared locally.
+// Matches the real struct layout confirmed via decompiled source.
+// (BgmLineFunction.h already forward-declares this class and the startBgm
+// overload that takes it -- we only need to provide the actual definition.)
+namespace al {
+class BgmPlayingRequest {
+public:
+    BgmPlayingRequest(const char* name) : bgmName(name) {}
+    const char* bgmName = nullptr;
+    const char* _8 = nullptr;
+    const char* _10 = nullptr;
+    s32 _18 = -1;
+    s32 _1c = 15;
+    s32 _20;
+    s32 _24;
+    s32 _28;
+    bool _2c = false;
+    bool _2d = false;
+    bool _2e = false;
+    bool _2f = false;
+};
+}  // namespace al
 
 StageSceneStateModConfig::StageSceneStateModConfig(
     const char* name, al::Scene* scene,
@@ -66,10 +92,24 @@ void StageSceneStateModConfig::updateMainMenuOptions() {
         msgList[MENU_MAIN]->mBuffer[i].copy(u"");
 
     msgList[MENU_MAIN]->mBuffer[MAIN_DUMMY_ACTION].copy(u"Dummy Action");
-    msgList[MENU_MAIN]->mBuffer[MAIN_TOGGLE_EXAMPLE].copy(
-    sExampleToggle ? u"Example Toggle: ON" : u"Example Toggle: OFF");
+
+    const auto& list = ca::getCombinedBgmList();
+    const char* name = list[mCurrentSongIndex].field_0;
+
+    char16 label[80];
+    int idx = 0;
+    label[idx++] = u'<';
+    label[idx++] = u' ';
+    for (int j = 0; name[j] != '\0' && idx < 77; ++j)
+        label[idx++] = (char16)name[j];
+    label[idx++] = u' ';
+    label[idx++] = u'>';
+    label[idx] = u'\0';
+
+    msgList[MENU_MAIN]->mBuffer[MAIN_PLAY_CUSTOM_SONG].copy(label);
+
+    optionsList[MENU_MAIN]->updateParts();
 }
-//Update exeMainMenu() to handle the input and actions for your menu options. For example, if you have a toggle option, flip its state when selected.
 void StageSceneStateModConfig::exeMainMenu() {
     if (al::isFirstStep(this)) {
         mCurrentList = optionsList[MENU_MAIN];
@@ -83,14 +123,26 @@ void StageSceneStateModConfig::exeMainMenu() {
         kill();
 
     if (mIsDecideConfig && mCurrentList->isDecideEnd()) {
+        mallow::log::logLine("decide end reached, mCurSelected=%d", mCurrentList->mCurSelected);
         switch (mCurrentList->mCurSelected) {
         case MAIN_DUMMY_ACTION:
             // TODO: replace with real action
             break;
-        case MAIN_TOGGLE_EXAMPLE:
-        sExampleToggle = !sExampleToggle;
-        updateMainMenuOptions();
-        break;
+        case MAIN_PLAY_CUSTOM_SONG: {
+            const auto& list = ca::getCombinedBgmList();
+            const char* songName = list[mCurrentSongIndex].field_0;
+            bool disabled = al::isDisableBgmSituationChange(getHost());
+            mallow::log::logLine("isDisableBgmSituationChange=%d", disabled);
+            if (disabled)
+                al::enableBgmSituationChange(getHost(), true);
+            bool registed = al::tryRegistTargetBgmResourceName(getHost(), songName);
+            mallow::log::logLine("regist=%d for name=%s", registed, songName);
+            al::BgmPlayingRequest request(songName);
+            al::startBgm(getHost(), request, false, false);
+            bool playing = al::isPlayingBgm(getHost(), songName);
+            mallow::log::logLine("isPlayingBgm(%s)=%d", songName, playing);
+            break;
+        }
         }
         activateInput();
     }
@@ -99,6 +151,8 @@ void StageSceneStateModConfig::exeMainMenu() {
 void StageSceneStateModConfig::handleMenuInput() {
     mInput->update();
     mCurrentList->update();
+
+    mallow::log::logLine("mCurSelected = %d", mCurrentList->mCurSelected);
 
     if (mInput->isHoldUiUp() && mInput->isRepeatUiUp()) {
         if (mInput->isTriggerUiUp() && mCurrentList->mCurSelected == mCurrentList->mTopSelectableIdx)
@@ -112,8 +166,28 @@ void StageSceneStateModConfig::handleMenuInput() {
         mCurrentList->down();
     }
 
-    if (rs::isTriggerUiDecide(mHost))
+    if (mCurrentList->mCurSelected == MAIN_PLAY_CUSTOM_SONG) {
+        const auto& list = ca::getCombinedBgmList();
+        s32 count = (s32)list.size();
+
+        bool right = mInput->isTriggerUiRight();
+        bool left = mInput->isTriggerUiLeft();
+        if (right || left)
+            mallow::log::logLine("song row: right=%d left=%d", right, left);
+
+        if (right) {
+            mCurrentSongIndex = (mCurrentSongIndex + 1) % count;
+            updateMainMenuOptions();
+        } else if (left) {
+            mCurrentSongIndex = (mCurrentSongIndex - 1 + count) % count;
+            updateMainMenuOptions();
+        }
+    }
+
+    if (rs::isTriggerUiDecide(mHost)) {
+        mallow::log::logLine("decide triggered, mCurSelected=%d", mCurrentList->mCurSelected);
         deactivateInput();
+    }
 }
 
 void StageSceneStateModConfig::activateInput() {
