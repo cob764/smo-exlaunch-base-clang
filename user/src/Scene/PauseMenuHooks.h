@@ -3,5 +3,4 @@
 namespace PauseMenuHooks {
 
     void installPauseMenuHooks();
-
 } // namespace PauseMenuHooks

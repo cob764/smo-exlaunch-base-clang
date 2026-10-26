@@ -18,6 +18,7 @@ target_sources(subsdk9 PRIVATE
         src/Kingdom-18/hooks/SaveOnSDCard.cpp
         src/Kingdom-18/sead/seadNinSDFileDeviceNin.cpp
 	src/Bgm/CustomMusicList.cpp
+        src/Bgm/DisableBgmResetOnDeath.cpp
 	src/Scene/PauseMenuHooks.cpp
 	src/Scene/StageSceneStateModConfig.cpp
 	src/Scene/StageSceneStatePauseMenu.cpp

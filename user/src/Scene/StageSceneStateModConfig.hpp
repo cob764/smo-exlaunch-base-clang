@@ -67,12 +67,14 @@ private:
 // add menu options here:
     enum MainMenuOption
     {
-        MAIN_DUMMY_ACTION = 0,
-        MAIN_PLAY_CUSTOM_SONG = 1
+        MAIN_SONG_SELECT = 0, MAIN_PLAY_SONG = 1, MAIN_INFO = 2, MAIN_DEATH_BGM = 3
     };
-    static constexpr int mMainMenuOptionCount = 2; //change this to the number of options you add to the menu
+    static constexpr int mMainMenuOptionCount = 4; //change this to the number of options you add to the menu
 
     s32 mCurrentSongIndex = 0;
+    s32 mInfoPage = 0;
+    void refreshRows();
+    bool isBgmPlayerAvailable() const;
 
     // ---- state --------------------------------------------------------------
     al::MessageSystem* mMsgSystem = nullptr;

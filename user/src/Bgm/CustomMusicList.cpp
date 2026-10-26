@@ -12,7 +12,7 @@ std::vector<BgmEntry> CombinedBgmList;
 // 3️⃣ Funktion zur Initialisierung
 // ---------------------------------------------------------
 
-#define NEW_MUSIC_LIST_NUM 120
+#define NEW_MUSIC_LIST_NUM 180
 void InitCustomBgmList() {
         // Originale Liste kopieren (82 Einträge)
         /*
@@ -206,6 +206,40 @@ void InitCustomBgmList() {
         CombinedBgmList.push_back({"STM_202", nullptr, nullptr, nullptr, "EtcBgm"});
         CombinedBgmList.push_back({"STM_203", nullptr, nullptr, nullptr, "EtcBgm"});
         CombinedBgmList.push_back({"STM_204", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_205", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_206", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_207", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_208", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_209", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_210", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_211", nullptr, nullptr, nullptr, "EtcBgm"});
+
+        // ** 161 to 170 **
+        CombinedBgmList.push_back({"STM_212", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_213", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_214", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_215", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_216", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_217", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_218", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_219", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_220", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_221", nullptr, nullptr, nullptr, "EtcBgm"});
+
+        // ** 171 to 180 **
+        CombinedBgmList.push_back({"STM_222", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_223", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_224", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_225", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_226", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_227", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_228", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_229", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_230", nullptr, nullptr, nullptr, "EtcBgm"});
+        CombinedBgmList.push_back({"STM_231", nullptr, nullptr, nullptr, "EtcBgm"});
+
+        // ** 181 to 189 **
+
 
         // Eigene zusätzliche Einträge
         /*

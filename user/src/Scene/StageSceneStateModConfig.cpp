@@ -1,41 +1,65 @@
 #include <mallow/mallow.hpp>
 #include "Scene/StageSceneStateModConfig.hpp"
 
+#include <cstdio>
+
 #include "Library/Layout/LayoutActionFunction.h"
 #include "Library/Layout/LayoutActorUtil.h"
+#include "Library/File/FileUtil.h"
+#include "Library/Message/IUseMessageSystem.h"
+#include "Library/Message/LanguageUtil.h"
+#include "Library/Message/MessageHolder.h"
 #include "Library/Nerve/NerveUtil.h"
+#include "Library/Scene/SceneObjUtil.h"
 
 #include "game/Layout/CommonVerticalList.h"
 #include "Layout/FooterParts.h"
 #include "Layout/SimpleLayoutMenu.h"
 #include "Util/StageInputFunction.h"
 
-#include "Library/Bgm/BgmLineFunction.h"
-#include "System/GameDataFunction.h"
-#include "System/GameDataHolderWriter.h"
+#include "Audio/CollectBgmPlayer.h"
+#include "Bgm/CustomMusicList.h"
+#include "ModText.h"  // user/src/Scene/ModText.h (same folder as this file)
 
-// Not present in this project's OdysseyHeaders copy, so declared locally.
-// Matches the real struct layout confirmed via decompiled source.
-// (BgmLineFunction.h already forward-declares this class and the startBgm
-// overload that takes it -- we only need to provide the actual definition.)
-namespace al {
-class BgmPlayingRequest {
-public:
-    BgmPlayingRequest(const char* name) : bgmName(name) {}
-    const char* bgmName = nullptr;
-    const char* _8 = nullptr;
-    const char* _10 = nullptr;
-    s32 _18 = -1;
-    s32 _1c = 15;
-    s32 _20;
-    s32 _24;
-    s32 _28;
-    bool _2c = false;
-    bool _2d = false;
-    bool _2e = false;
-    bool _2f = false;
+bool deathbgmtrigger = true;  // global variable to trigger death BGM in the mod config menu
+
+namespace {
+const char* kBgmDbArchive = "SoundData/BgmDataBase";  // checked with al::isExistArchive
+const s32 kInfoPages = 3;
+
+struct U16Buf {
+    char16 data[96];
+    int len = 0;
+    U16Buf() { data[0] = u'\0'; }
+    void add(const char16* s) {
+        for (; s && *s && len < 94; ++s)
+            data[len++] = *s;
+        data[len] = u'\0';
+    }
+    void add(const char* s) {
+        for (; s && *s && len < 94; ++s)
+            data[len++] = (char16)(unsigned char)*s;
+        data[len] = u'\0';
+    }
+    void addInt(int v) {
+        char t[16];
+        snprintf(t, sizeof(t), "%d", v);
+        add(t);
+    }
 };
-}  // namespace al
+
+const char16* lookupSongName(const al::IUseMessageSystem* ms, const BgmEntry& e) {
+    char key[128];
+    if (e.field_1) {  // variants, e.g. the 2D version of the same song
+        snprintf(key, sizeof(key), "%s_%s", e.field_0, e.field_1);
+        if (al::isExistLabelInSystemMessage(ms, "CollectBgmList", key))
+            return al::getSystemMessageString(ms, "CollectBgmList", key);
+    }
+    if (al::isExistLabelInSystemMessage(ms, "CollectBgmList", e.field_0))
+        return al::getSystemMessageString(ms, "CollectBgmList", e.field_0);
+    return nullptr;
+}
+}  // namespace
 
 StageSceneStateModConfig::StageSceneStateModConfig(
     const char* name, al::Scene* scene,
@@ -78,7 +102,8 @@ void StageSceneStateModConfig::initMainMenu(const al::LayoutInitInfo& initInfo) 
     optionsList[MENU_MAIN] = new CommonVerticalList(
         menuList[MENU_MAIN], initInfo, true);
 
-    al::setPaneString(menuList[MENU_MAIN], "TxtOption", u"Mod Configuration", 0);
+    al::setPaneString(menuList[MENU_MAIN], "TxtOption",
+                      ca::modText(menuList[MENU_MAIN], "Title", u"Mod Configuration"), 0);
     optionsList[MENU_MAIN]->initDataNoResetSelected(mMainMenuOptionCount);
     updateMainMenuOptions();
     optionsList[MENU_MAIN]->addStringData(msgList[MENU_MAIN]->mBuffer, "TxtContent");
@@ -86,30 +111,86 @@ void StageSceneStateModConfig::initMainMenu(const al::LayoutInitInfo& initInfo) 
     for (int i = 0; i < mMainMenuOptionCount; i++)
         setMenuItemBase(optionsList[MENU_MAIN]->mListPartsArr[i + 1]);
 }
-//Update this to reflect the current state of your menu options. For example, if you have a toggle option, update the text to show whether it's on or off.
+
+// The title-screen menu has no CollectBgmPlayer scene object -> the BGM player is unavailable.
+bool StageSceneStateModConfig::isBgmPlayerAvailable() const {
+    return al::isExistSceneObj<CollectBgmPlayer>(mHost);
+}
+
+// Only clears the buffers; the real row texts are written every frame by refreshRows().
 void StageSceneStateModConfig::updateMainMenuOptions() {
     for (int i = 0; i < maxMsgCount; i++)
         msgList[MENU_MAIN]->mBuffer[i].copy(u"");
-
-    msgList[MENU_MAIN]->mBuffer[MAIN_DUMMY_ACTION].copy(u"Dummy Action");
-
-    const auto& list = ca::getCombinedBgmList();
-    const char* name = list[mCurrentSongIndex].field_0;
-
-    char16 label[80];
-    int idx = 0;
-    label[idx++] = u'<';
-    label[idx++] = u' ';
-    for (int j = 0; name[j] != '\0' && idx < 77; ++j)
-        label[idx++] = (char16)name[j];
-    label[idx++] = u' ';
-    label[idx++] = u'>';
-    label[idx] = u'\0';
-
-    msgList[MENU_MAIN]->mBuffer[MAIN_PLAY_CUSTOM_SONG].copy(label);
-
     optionsList[MENU_MAIN]->updateParts();
 }
+
+// Writes the text of every row straight into the list (called every frame).
+void StageSceneStateModConfig::refreshRows() {
+    const al::IUseMessageSystem* ms = menuList[MENU_MAIN];
+    CommonVerticalList* list = optionsList[MENU_MAIN];
+    auto setRow = [&](int row, const char16* text) {
+        al::setPaneString(list->mListPartsArr[row + 1], "TxtContent", text, 0);
+    };
+
+    // Row 0: song selector (or the "unavailable" message)
+    if (isBgmPlayerAvailable()) {
+        const BgmEntry& e = ca::getCombinedBgmList()[mCurrentSongIndex];
+        U16Buf b;
+        b.add(u"< ");
+        if (const char16* t = lookupSongName(ms, e))
+            b.add(t);
+        else
+            b.add(e.field_0);
+        b.add(u" >");
+        setRow(MAIN_SONG_SELECT, b.data);
+    } else {
+        setRow(MAIN_SONG_SELECT,
+               ca::modText(ms, "BgmUnavailable", u"The BGM Player is unavailable right now"));
+    }
+
+    // Row 1: play button
+    setRow(MAIN_PLAY_SONG, ca::modText(ms, "Play", u"Play"));
+
+    // Row 2: info pages
+    {
+        U16Buf b;
+        b.add(ca::modText(ms, "Info", u"Info"));
+        b.add(u": < ");
+        switch (mInfoPage) {
+        case 0:
+            b.add(ca::modText(ms, "InfoSongs", u"Songs registered"));
+            b.add(u": ");
+            b.addInt((int)ca::getCombinedBgmList().size());
+            break;
+        case 1:
+            b.add(ca::modText(ms, "InfoLanguage", u"Language"));
+            b.add(u": ");
+            b.add(al::getLanguageString());
+            break;
+        default:
+            b.add(ca::modText(ms, "InfoBgmDb", u"BgmDataBase.szs"));
+            b.add(u": ");
+            if (al::isExistArchive(kBgmDbArchive))
+                b.add(ca::modText(ms, "Found", u"Found"));
+            else
+                b.add(ca::modText(ms, "NotFound", u"Not found"));
+            break;
+        }
+        b.add(u" >");
+        setRow(MAIN_INFO, b.data);
+    }
+    {
+        U16Buf b;
+        b.add(ca::modText(ms, "InfoDeathBgm", u"Death BGM Trigger"));
+        b.add(u": ");
+        if (deathbgmtrigger == true)
+            b.add(ca::modText(ms, "InfoDeathBgmOn", u"On"));
+        else
+            b.add(ca::modText(ms, "InfoDeathBgmOff", u"Off"));
+        setRow(MAIN_DEATH_BGM, b.data);
+    }
+}
+
 void StageSceneStateModConfig::exeMainMenu() {
     if (al::isFirstStep(this)) {
         mCurrentList = optionsList[MENU_MAIN];
@@ -123,28 +204,47 @@ void StageSceneStateModConfig::exeMainMenu() {
         kill();
 
     if (mIsDecideConfig && mCurrentList->isDecideEnd()) {
-        mallow::log::logLine("decide end reached, mCurSelected=%d", mCurrentList->mCurSelected);
         switch (mCurrentList->mCurSelected) {
-        case MAIN_DUMMY_ACTION:
-            // TODO: replace with real action
+        case MAIN_SONG_SELECT:
+        {
+            if (!isBgmPlayerAvailable()) {
+                mallow::log::logLine("Play pressed but the BGM player is unavailable (title menu)");
+            } else {
+                const BgmEntry& e = ca::getCombinedBgmList()[mCurrentSongIndex];
+                auto* player = al::getSceneObj<CollectBgmPlayer>(getHost());
+                mallow::log::logLine("CollectBgmPlayer=%p song=%s", player, e.field_0);
+                if (player) {
+                    player->stop(0);
+                    player->start(e.field_0, e.field_1);
+                }
+                activateInput();
+            }
+        }
+            
+        case MAIN_PLAY_SONG:
+        {
+            if (!isBgmPlayerAvailable()) {
+                mallow::log::logLine("Play pressed but the BGM player is unavailable (title menu)");
+            } else {
+                const BgmEntry& e = ca::getCombinedBgmList()[mCurrentSongIndex];
+                auto* player = al::getSceneObj<CollectBgmPlayer>(getHost());
+                mallow::log::logLine("CollectBgmPlayer=%p song=%s", player, e.field_0);
+                if (player) {
+                    player->stop(0);
+                    player->start(e.field_0, e.field_1);
+                }
+                activateInput();
+            }
+        }
+        case MAIN_INFO:
+            activateInput();
             break;
-        case MAIN_PLAY_CUSTOM_SONG: {
-            const auto& list = ca::getCombinedBgmList();
-            const char* songName = list[mCurrentSongIndex].field_0;
-            bool disabled = al::isDisableBgmSituationChange(getHost());
-            mallow::log::logLine("isDisableBgmSituationChange=%d", disabled);
-            if (disabled)
-                al::enableBgmSituationChange(getHost(), true);
-            bool registed = al::tryRegistTargetBgmResourceName(getHost(), songName);
-            mallow::log::logLine("regist=%d for name=%s", registed, songName);
-            al::BgmPlayingRequest request(songName);
-            al::startBgm(getHost(), request, false, false);
-            bool playing = al::isPlayingBgm(getHost(), songName);
-            mallow::log::logLine("isPlayingBgm(%s)=%d", songName, playing);
+        case MAIN_DEATH_BGM:
+            deathbgmtrigger = !deathbgmtrigger;
+            activateInput();
             break;
         }
-        }
-        activateInput();
+        
     }
 }
 
@@ -152,7 +252,7 @@ void StageSceneStateModConfig::handleMenuInput() {
     mInput->update();
     mCurrentList->update();
 
-    mallow::log::logLine("mCurSelected = %d", mCurrentList->mCurSelected);
+    refreshRows();
 
     if (mInput->isHoldUiUp() && mInput->isRepeatUiUp()) {
         if (mInput->isTriggerUiUp() && mCurrentList->mCurSelected == mCurrentList->mTopSelectableIdx)
@@ -166,28 +266,23 @@ void StageSceneStateModConfig::handleMenuInput() {
         mCurrentList->down();
     }
 
-    if (mCurrentList->mCurSelected == MAIN_PLAY_CUSTOM_SONG) {
-        const auto& list = ca::getCombinedBgmList();
-        s32 count = (s32)list.size();
-
-        bool right = mInput->isTriggerUiRight();
-        bool left = mInput->isTriggerUiLeft();
-        if (right || left)
-            mallow::log::logLine("song row: right=%d left=%d", right, left);
-
-        if (right) {
-            mCurrentSongIndex = (mCurrentSongIndex + 1) % count;
-            updateMainMenuOptions();
-        } else if (left) {
-            mCurrentSongIndex = (mCurrentSongIndex - 1 + count) % count;
-            updateMainMenuOptions();
+    int dir = mInput->isTriggerUiRight() ? 1 : (mInput->isTriggerUiLeft() ? -1 : 0);
+    if (dir != 0) {
+        switch (mCurrentList->mCurSelected) {
+        case MAIN_SONG_SELECT:
+            if (isBgmPlayerAvailable()) {
+                s32 count = (s32)ca::getCombinedBgmList().size();
+                mCurrentSongIndex = (mCurrentSongIndex + dir + count) % count;
+            }
+            break;
+        case MAIN_INFO:
+            mInfoPage = (mInfoPage + dir + kInfoPages) % kInfoPages;
+            break;
         }
     }
 
-    if (rs::isTriggerUiDecide(mHost)) {
-        mallow::log::logLine("decide triggered, mCurSelected=%d", mCurrentList->mCurSelected);
+    if (rs::isTriggerUiDecide(mHost))
         deactivateInput();
-    }
 }
 
 void StageSceneStateModConfig::activateInput() {
